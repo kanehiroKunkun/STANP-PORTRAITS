@@ -2,72 +2,117 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My ZINE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>My ZINE - Fullscreen</title>
     <style>
-        body {
-            margin: 0;
-            background-color: #f4f4f4;
-            font-family: sans-serif;
+        :root {
+            --bg-color: #ffffff; /* 背景色（白） */
+            --nav-arrow-color: rgba(0, 0, 0, 0.3); /* 矢印の色（半透明の黒） */
         }
 
-        /* --- スマホ用（縦スクロール） --- */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            font-family: sans-serif;
+            overflow-x: hidden; /* 横スクロール防止 */
+        }
+
+        /* 画像共通設定（影なし、めいっぱい表示） */
+        img {
+            display: block;
+            box-shadow: none !important; /* 影を強制削除 */
+            -webkit-user-select: none; /* 画像長押し保存を防ぐ（操作優先） */
+            user-select: none;
+        }
+
+        /* =========================================
+           スマホ用（縦スクロール、画面全幅）
+        ========================================= */
         #mobile-view {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: 20px;
-            padding: 20px 0;
-        }
-        #mobile-view img {
-            max-width: 95%;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            background: white;
-        }
-
-        /* --- PC・iPad用（見開き＆クリック） --- */
-        #desktop-view {
-            display: none; /* 初期状態は非表示 */
-            height: 100vh;
-            position: relative;
-            cursor: pointer;
-            overflow: hidden;
+            width: 100%;
         }
         
-        /* 右綴じ（右から左へ読む）レイアウト */
+        #mobile-view img {
+            width: 100%; /* 横幅いっぱい */
+            height: auto;
+            border: none;
+        }
+
+        /* =========================================
+           PC・iPad用（見開き、全画面クリック）
+        ========================================= */
+        #desktop-view {
+            display: none; /* 初期状態は非表示 */
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+            background-color: var(--bg-color);
+        }
+        
+        /* 見開きコンテナ（右綴じ用） */
         .spread-container {
             display: flex;
-            flex-direction: row-reverse; 
+            flex-direction: row-reverse; /* 右から左へ並べる */
             justify-content: center;
             align-items: center;
+            width: 100%;
             height: 100%;
-            gap: 2px;
         }
 
+        /* 画像：縦めいっぱい、横幅は維持 */
         .spread-container img {
-            max-width: 48vw;
-            max-height: 95vh;
-            object-fit: contain;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            background: white;
+            height: 100vh;
+            width: auto;
+            max-width: 50vw; /* 2枚並ぶので最大半分 */
+            object-fit: contain; /* アスペクト比を維持 */
         }
 
+        /* 最初のページ（左配置、右空白）用の調整 */
+        .spread-container.first-page,
+        .spread-container.last-page {
+            flex-direction: row; /* 中央配置にするためリセット */
+        }
+        
         /* 画面幅が768px以上（iPad・PC）のときの切り替え */
         @media (min-width: 768px) {
             #mobile-view { display: none; }
             #desktop-view { display: block; }
         }
 
-        /* 操作ヒント */
-        .hint {
+        /* =========================================
+           ナビゲーション（三角矢印）
+        ========================================= */
+        .nav-btn {
             position: absolute;
-            bottom: 20px;
-            width: 100%;
-            text-align: center;
-            color: #888;
-            font-size: 14px;
-            pointer-events: none;
+            top: 0;
+            height: 100%;
+            width: 10vw; /* クリックエリアを画面端10%に設定 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 10;
+            transition: background 0.3s;
         }
+        
+        .nav-btn:hover {
+            background-color: rgba(0, 0, 0, 0.05); /* ホバー時に薄く色をつける */
+        }
+
+        .nav-btn.prev { right: 0; } /* 前へ（右綴じなので右端） */
+        .nav-btn.next { left: 0; }  /* 次へ（右綴じなので左端） */
+
+        /* SVGの三角矢印 */
+        .nav-btn svg {
+            width: 40px;
+            height: 40px;
+            fill: var(--nav-arrow-color);
+        }
+
     </style>
 </head>
 <body>
@@ -76,67 +121,108 @@
 
     <div id="desktop-view">
         <div class="spread-container" id="spread-container"></div>
-        <div class="hint">← 左クリックで進む ｜ 右クリックで戻る →</div>
+        
+        <div class="nav-btn next" id="btn-next">
+            <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+        </div>
+        <div class="nav-btn prev" id="btn-prev">
+            <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+        </div>
     </div>
 
 <script>
     // ⚠️【重要】アップロードしたSVGのファイル名と完全に一致させてください
+    // 最初が表紙、最後が裏表紙を想定しています。
     const pages = [
         "images/logo_test.svg",
         "images/編集後記.png",
         "images/前書き.png",
+        "images/logo_test.svg"// 例として3ページ
     ];
 
-    // --- スマホ用の画像読み込み（すべて縦に並べる） ---
+    // --- スマホ用の画像読み込み（全幅で縦に並べる） ---
     const mobileView = document.getElementById('mobile-view');
     pages.forEach(src => {
         const img = document.createElement('img');
         img.src = src;
-        img.alt = "ZINE page";
         mobileView.appendChild(img);
     });
 
     // --- PC・iPad用の見開き処理 ---
     let currentIndex = 0;
-    const desktopView = document.getElementById('desktop-view');
     const spreadContainer = document.getElementById('spread-container');
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
 
     function renderSpread() {
         spreadContainer.innerHTML = '';
+        spreadContainer.className = 'spread-container'; // クラスをリセット
         
-        // 1枚目（右側に表示される）
-        if (pages[currentIndex]) {
-            const img1 = document.createElement('img');
-            img1.src = pages[currentIndex];
-            spreadContainer.appendChild(img1);
+        // 【重要】右綴じのロジック
+
+        // 1. 最初のページ（表紙）：1枚で左側に表示、右側は空白
+        if (currentIndex === 0) {
+            spreadContainer.classList.add('first-page');
+            const img = document.createElement('img');
+            img.src = pages[currentIndex];
+            spreadContainer.appendChild(img);
+            // 右側には何も追加しない（空白になる）
         }
-        // 2枚目（左側に表示される）
-        if (pages[currentIndex + 1]) {
-            const img2 = document.createElement('img');
-            img2.src = pages[currentIndex + 1];
-            spreadContainer.appendChild(img2);
+        // 2. 最後のページ（裏表紙）：1枚で右側に表示、左側は空白
+        // ※ページ数が偶数の場合、単独表示にするための調整
+        else if (currentIndex === pages.length - 1) {
+            spreadContainer.classList.add('last-page');
+            // 左側は空白にするため、先にダミーの透明な画像か何かを置く代わりに、
+            // CSSでflex-directionをrowに戻して、画像を1枚だけ追加する。
+            const img = document.createElement('img');
+            img.src = pages[currentIndex];
+            spreadContainer.appendChild(img);
         }
+        // 3. 通常の見開きページ
+        else {
+            // 現在のインデックスにある画像（右缀じなので、見開きの「右側」に来る）
+            const imgRight = document.createElement('img');
+            imgRight.src = pages[currentIndex];
+            spreadContainer.appendChild(imgRight);
+
+            // 次のインデックスにある画像（見開きの「左側」に来る）
+            if (pages[currentIndex + 1]) {
+                const imgLeft = document.createElement('img');
+                imgLeft.src = pages[currentIndex + 1];
+                spreadContainer.appendChild(imgLeft);
+            }
+        }
+
+        // 矢印の表示/非表示制御
+        btnPrev.style.display = (currentIndex === 0) ? 'none' : 'flex';
+        btnNext.style.display = (currentIndex >= pages.length - 1) ? 'none' : 'flex';
     }
 
-    // クリックでのページめくり処理
-    desktopView.addEventListener('click', (e) => {
-        const width = desktopView.offsetWidth;
-        const clickX = e.clientX;
+    // ナビゲーションのイベントリスナー
+    btnPrev.addEventListener('click', () => {
+        // 前へ戻る
+        if (currentIndex === 0) return;
 
-        if (clickX > width / 2) {
-            // 画面の右側をクリック：1ページ前（戻る）
-            if (currentIndex > 0) {
-                currentIndex -= 2; // 見開きなので2ページ分戻る
-                if (currentIndex < 0) currentIndex = 0;
-                renderSpread();
-            }
+        if (currentIndex === 1) {
+            // 見開きから表紙へ戻る場合
+            currentIndex = 0;
         } else {
-            // 画面の左側をクリック：1ページ先（進む）
-            if (currentIndex + 2 < pages.length) {
-                currentIndex += 2; // 見開きなので2ページ分進む
-                renderSpread();
-            }
+            currentIndex -= 2; // 通常は2ページ戻る
         }
+        renderSpread();
+    });
+
+    btnNext.addEventListener('click', () => {
+        // 次へ進む
+        if (currentIndex >= pages.length - 1) return;
+
+        if (currentIndex === 0) {
+            // 表紙から最初の見開きへ進む場合
+            currentIndex = 1;
+        } else {
+            currentIndex += 2; // 通常は2ページ進む
+        }
+        renderSpread();
     });
 
     // 初回表示
