@@ -3,155 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My ZINE Project</title>
+    <title>My ZINE</title>
     <style>
-        :root {
-            --bg-color: #f4f4f4; /* 背景色 */
-            --shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-
         body {
             margin: 0;
-            padding: 0;
-            background-color: var(--bg-color);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            overflow: hidden; /* スクロール禁止、クリックで移動 */
+            background-color: #f4f4f4;
             font-family: sans-serif;
         }
 
-        /* ZINEを表示するコンテナ */
-        #zine-viewer {
-            position: relative;
+        /* --- スマホ用（縦スクロール） --- */
+        #mobile-view {
             display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 20px 0;
+        }
+        #mobile-view img {
+            max-width: 95%;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            background: white;
+        }
+
+        /* --- PC・iPad用（見開き＆クリック） --- */
+        #desktop-view {
+            display: none; /* 初期状態は非表示 */
+            height: 100vh;
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+        }
+        
+        /* 右綴じ（右から左へ読む）レイアウト */
+        .spread-container {
+            display: flex;
+            flex-direction: row-reverse; 
             justify-content: center;
             align-items: center;
-            width: 95vw;
-            height: 90vh;
-            cursor: pointer;
+            height: 100%;
+            gap: 2px;
         }
 
-        .page-wrapper {
-            display: flex;
-            gap: 2px; /* 見開きの境目 */
-            max-width: 100%;
-            max-height: 100%;
-        }
-
-        .page-img {
-            max-width: 100%;
-            max-height: 90vh;
+        .spread-container img {
+            max-width: 48vw;
+            max-height: 95vh;
             object-fit: contain;
-            box-shadow: var(--shadow);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             background: white;
-            display: none; /* 初期は非表示 */
         }
 
-        .page-img.active {
-            display: block;
+        /* 画面幅が768px以上（iPad・PC）のときの切り替え */
+        @media (min-width: 768px) {
+            #mobile-view { display: none; }
+            #desktop-view { display: block; }
         }
 
-        /* PC・iPad（見開き用） */
-        @media (min-width: 769px) {
-            .page-img.active {
-                max-width: 48%; /* 2枚並べるためのサイズ */
-            }
-        }
-
-        /* スマホ（1枚用） */
-        @media (max-width: 768px) {
-            .page-img.active {
-                max-width: 100%;
-            }
-        }
-
-        /* 操作ヒント（薄く表示） */
-        .nav-hint {
+        /* 操作ヒント */
+        .hint {
             position: absolute;
             bottom: 20px;
-            color: #999;
-            font-size: 12px;
+            width: 100%;
+            text-align: center;
+            color: #888;
+            font-size: 14px;
             pointer-events: none;
         }
     </style>
 </head>
 <body>
 
-<div id="zine-viewer">
-    <div class="page-wrapper" id="page-container">
-        </div>
-    <div class="nav-hint">← 前へ (左側クリック) | 次へ (右側クリック) →</div>
-</div>
+    <div id="mobile-view"></div>
+
+    <div id="desktop-view">
+        <div class="spread-container" id="spread-container"></div>
+        <div class="hint">← 左クリックで進む ｜ 右クリックで戻る →</div>
+    </div>
 
 <script>
-    // 1. ここに画像ファイル名を順番に入力してください
+    // ⚠️【重要】アップロードしたSVGのファイル名と完全に一致させてください
     const pages = [
         "images/logo_test.svg",
         "images/編集後記.png",
         "images/前書き.png",
-        "images/page03.svg",
-        "images/page04.svg",
-        "images/backcover.svg"
     ];
 
+    // --- スマホ用の画像読み込み（すべて縦に並べる） ---
+    const mobileView = document.getElementById('mobile-view');
+    pages.forEach(src => {
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = "ZINE page";
+        mobileView.appendChild(img);
+    });
+
+    // --- PC・iPad用の見開き処理 ---
     let currentIndex = 0;
-    const container = document.getElementById('page-container');
+    const desktopView = document.getElementById('desktop-view');
+    const spreadContainer = document.getElementById('spread-container');
 
-    // 画像を表示する関数
-    function render() {
-        container.innerHTML = '';
-        const isMobile = window.innerWidth <= 768;
-
-        if (isMobile) {
-            // スマホは1枚表示
-            const img = document.createElement('img');
-            img.src = pages[currentIndex];
-            img.className = 'page-img active';
-            container.appendChild(img);
-        } else {
-            // iPad・PCは見開き表示
-            // 現在のインデックスから2枚分表示（配列を超えないように制御）
-            for (let i = 0; i < 2; i++) {
-                if (pages[currentIndex + i]) {
-                    const img = document.createElement('img');
-                    img.src = pages[currentIndex + i];
-                    img.className = 'page-img active';
-                    container.appendChild(img);
-                }
-            }
+    function renderSpread() {
+        spreadContainer.innerHTML = '';
+        
+        // 1枚目（右側に表示される）
+        if (pages[currentIndex]) {
+            const img1 = document.createElement('img');
+            img1.src = pages[currentIndex];
+            spreadContainer.appendChild(img1);
+        }
+        // 2枚目（左側に表示される）
+        if (pages[currentIndex + 1]) {
+            const img2 = document.createElement('img');
+            img2.src = pages[currentIndex + 1];
+            spreadContainer.appendChild(img2);
         }
     }
 
-    // クリックイベント
-    document.getElementById('zine-viewer').addEventListener('click', (e) => {
-        const viewerWidth = e.currentTarget.offsetWidth;
-        const clickX = e.offsetX;
-        const isMobile = window.innerWidth <= 768;
-        const step = isMobile ? 1 : 2; // 移動するページ数
+    // クリックでのページめくり処理
+    desktopView.addEventListener('click', (e) => {
+        const width = desktopView.offsetWidth;
+        const clickX = e.clientX;
 
-        if (clickX > viewerWidth / 2) {
-            // 右側クリック：次へ（1ページ戻る）
-            // ※ご要望「右クリックで1ページ前」に従いマイナス処理
-            if (currentIndex - step >= 0) {
-                currentIndex -= step;
+        if (clickX > width / 2) {
+            // 画面の右側をクリック：1ページ前（戻る）
+            if (currentIndex > 0) {
+                currentIndex -= 2; // 見開きなので2ページ分戻る
+                if (currentIndex < 0) currentIndex = 0;
+                renderSpread();
             }
         } else {
-            // 左側クリック：前へ（1ページ先へ）
-            // ※ご要望「左クリックで1ページ先」に従いプラス処理
-            if (currentIndex + step < pages.length) {
-                currentIndex += step;
+            // 画面の左側をクリック：1ページ先（進む）
+            if (currentIndex + 2 < pages.length) {
+                currentIndex += 2; // 見開きなので2ページ分進む
+                renderSpread();
             }
         }
-        render();
     });
 
-    // 画面サイズ変更時に再描画
-    window.addEventListener('resize', render);
-
-    // 初回実行
-    render();
+    // 初回表示
+    renderSpread();
 </script>
 
 </body>
