@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My ZINE Project</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f4; /* 背景色 */
+            --shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden; /* スクロール禁止、クリックで移動 */
+            font-family: sans-serif;
+        }
+
+        /* ZINEを表示するコンテナ */
+        #zine-viewer {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 95vw;
+            height: 90vh;
+            cursor: pointer;
+        }
+
+        .page-wrapper {
+            display: flex;
+            gap: 2px; /* 見開きの境目 */
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .page-img {
+            max-width: 100%;
+            max-height: 90vh;
+            object-fit: contain;
+            box-shadow: var(--shadow);
+            background: white;
+            display: none; /* 初期は非表示 */
+        }
+
+        .page-img.active {
+            display: block;
+        }
+
+        /* PC・iPad（見開き用） */
+        @media (min-width: 769px) {
+            .page-img.active {
+                max-width: 48%; /* 2枚並べるためのサイズ */
+            }
+        }
+
+        /* スマホ（1枚用） */
+        @media (max-width: 768px) {
+            .page-img.active {
+                max-width: 100%;
+            }
+        }
+
+        /* 操作ヒント（薄く表示） */
+        .nav-hint {
+            position: absolute;
+            bottom: 20px;
+            color: #999;
+            font-size: 12px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="zine-viewer">
+    <div class="page-wrapper" id="page-container">
+        </div>
+    <div class="nav-hint">← 前へ (左側クリック) | 次へ (右側クリック) →</div>
+</div>
+
+<script>
+    // 1. ここに画像ファイル名を順番に入力してください
+    const pages = [
+        "images/cover.svg",
+        "images/page01.svg",
+        "images/page02.svg",
+        "images/page03.svg",
+        "images/page04.svg",
+        "images/backcover.svg"
+    ];
+
+    let currentIndex = 0;
+    const container = document.getElementById('page-container');
+
+    // 画像を表示する関数
+    function render() {
+        container.innerHTML = '';
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // スマホは1枚表示
+            const img = document.createElement('img');
+            img.src = pages[currentIndex];
+            img.className = 'page-img active';
+            container.appendChild(img);
+        } else {
+            // iPad・PCは見開き表示
+            // 現在のインデックスから2枚分表示（配列を超えないように制御）
+            for (let i = 0; i < 2; i++) {
+                if (pages[currentIndex + i]) {
+                    const img = document.createElement('img');
+                    img.src = pages[currentIndex + i];
+                    img.className = 'page-img active';
+                    container.appendChild(img);
+                }
+            }
+        }
+    }
+
+    // クリックイベント
+    document.getElementById('zine-viewer').addEventListener('click', (e) => {
+        const viewerWidth = e.currentTarget.offsetWidth;
+        const clickX = e.offsetX;
+        const isMobile = window.innerWidth <= 768;
+        const step = isMobile ? 1 : 2; // 移動するページ数
+
+        if (clickX > viewerWidth / 2) {
+            // 右側クリック：次へ（1ページ戻る）
+            // ※ご要望「右クリックで1ページ前」に従いマイナス処理
+            if (currentIndex - step >= 0) {
+                currentIndex -= step;
+            }
+        } else {
+            // 左側クリック：前へ（1ページ先へ）
+            // ※ご要望「左クリックで1ページ先」に従いプラス処理
+            if (currentIndex + step < pages.length) {
+                currentIndex += step;
+            }
+        }
+        render();
+    });
+
+    // 画面サイズ変更時に再描画
+    window.addEventListener('resize', render);
+
+    // 初回実行
+    render();
+</script>
+
+</body>
+</html>
